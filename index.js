@@ -19,6 +19,19 @@ app.listen(port,()=>{
 
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.8n6fjbk.mongodb.net/?retryWrites=true&w=majority&appName=cluster0`;
 
+
+// featured rooms
+app.get('/topRooms',async(req,res)=>{
+    const roomsCollection = client.db('cozy-rooms').collection('rooms-collection');
+    const topRooms=await roomsCollection
+    .find({})
+      .limit(6)
+      .toArray();
+    res.json(topRooms);
+    console.log(topRooms);
+    
+})
+
     const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -35,7 +48,7 @@ async function run() {
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
