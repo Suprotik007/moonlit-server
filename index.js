@@ -27,10 +27,20 @@ app.get('/topRooms',async(req,res)=>{
     .find({})
       .limit(6)
       .toArray();
-    res.json(topRooms);
-    console.log(topRooms);
-    
+    res.json(topRooms);  
 })
+
+// allRooms
+app.get('/allRooms',async (req,res)=>{
+  const roomsCollection=client.db('cozy-rooms').collection('rooms-collection')
+  const allRooms=await roomsCollection
+  .find({})
+  .toArray()
+  res.json(allRooms)
+  console.log(allRooms);
+  
+})
+
 
     const client = new MongoClient(uri, {
   serverApi: {
