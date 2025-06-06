@@ -37,10 +37,18 @@ app.get('/allRooms',async (req,res)=>{
   .find({})
   .toArray()
   res.json(allRooms)
-  console.log(allRooms);
-  
+  console.log(allRooms);  
 })
 
+//roomDetails 
+app.get('/allRooms/:id',async(req,res)=>{
+  const id=req.params.id
+  const room=client.db('cozy-rooms').collection('rooms-collection')
+  const roomDetails=await room .findOne({ _id: new ObjectId(id) })
+  res.json(roomDetails)
+  // console.log(roomDetails);
+  
+})
 
     const client = new MongoClient(uri, {
   serverApi: {
