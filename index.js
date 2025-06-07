@@ -46,9 +46,17 @@ app.get('/allRooms/:id',async(req,res)=>{
   const room=client.db('cozy-rooms').collection('rooms-collection')
   const roomDetails=await room .findOne({ _id: new ObjectId(id) })
   res.json(roomDetails)
-  // console.log(roomDetails);
   
 })
+// bookingData
+app.post('/bookedRooms',async(req,res)=>{
+const bookedRooms = req.body;
+console.log(bookedRooms);
+const bookingDataCollection=client.db('cozy-rooms').collection('BookingData-collection')
+const result=await bookingDataCollection.insertOne(bookedRooms)
+res.send(result)
+
+    })
 
     const client = new MongoClient(uri, {
   serverApi: {
