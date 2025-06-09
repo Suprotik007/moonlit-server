@@ -74,7 +74,7 @@ async function run() {
       res.send({ isBooked: !!existingBooking });
     });
     
-
+// bookingData filtering
     app.get('/bookedRooms',async(req,res)=>{
       const user=req.query.email
       const filterUser=user ? {email: user}:{}
@@ -83,17 +83,31 @@ async function run() {
       .toArray()
       res.send(bookings)
     })
+
 // cancelBooking
 app.delete('/bookedRooms/:id',async(req,res)=>{
   const id=req.params.id
   const query={_id: new ObjectId(id)}
   const result=await bookingDataCollection.deleteOne(query)
   res.send(result)
-}
+})
 
-)
+// review
+const reviewCollection=client.db('cozy-rooms').collection('review-collection');
+app.post('/reviews',async(req,res)=>{
+  // const id=req.params.id
+  const user=req.query.name
+  const review={
+    userName: req.body.userName,
+    
+      rating: parseInt(req.body.rating),
+      description: req.body.description,
+      date: req.body.date || new Date().toISOString(),
+  }
+  const result=await reviewCollection.insertOne(review)
+  res.send(result)
 
-
+})
 
 
 
