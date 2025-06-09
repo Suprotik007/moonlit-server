@@ -31,7 +31,7 @@ async function run() {
     const bookingDataCollection = db.collection('BookingData-collection');
 
     console.log('Connected to MongoDB!');
-
+ 
     //featuredRooms
     app.get('/topRooms', async (req, res) => {
       const topRooms = await roomsCollection
@@ -73,6 +73,22 @@ async function run() {
       const existingBooking = await bookingDataCollection.findOne({ roomId: roomId });
       res.send({ isBooked: !!existingBooking });
     });
+    
+
+    app.get('/bookedRooms',async(req,res)=>{
+      const user=req.query.email
+      const filterUser=user ? {email: user}:{}
+      const bookings=await bookingDataCollection
+      .find(filterUser)
+      .toArray()
+      res.send(bookings)
+    })
+
+
+
+
+
+
 
     app.listen(port, () => {
       console.log(`Cozy Rooms server running on port ${port}`);
