@@ -33,14 +33,31 @@ async function run() {
     console.log('Connected to MongoDB!');
  
     //featuredRooms
-    app.get('/topRooms', async (req, res) => {
-      const topRooms = await roomsCollection
-      .find({})
-      .limit(6)
-      .toArray();
-      res.json(topRooms);
-    });
-
+     app.get('/topRooms', async (req, res) => {
+  const reviewCounts = await reviewCollection.aggregate([
+  {
+  $group: {
+  _id: '$title',
+  count: { $sum: 1 }
+  }
+  },
+  {
+  $sort: { count: -1 ,_id:1} 
+  },
+  {
+  $limit: 6 
+  }
+  ]).toArray();
+ 
+  const ascendingRoom = reviewCounts.map(item => item._id);
+  const topRooms = await Promise.all(
+  ascendingRoom.map(async (title) => {
+  return await roomsCollection.findOne({ title: title });
+  })
+  );
+  res.json(topRooms.slice(0,6));
+  });
+ 
     //allRooms
     app.get('/allRooms', async (req, res) => {
       const allRooms = await roomsCollection
@@ -95,8 +112,7 @@ app.delete('/bookedRooms/:id',async(req,res)=>{
 // review
 const reviewCollection=client.db('cozy-rooms').collection('review-collection');
 app.post('/reviews',async(req,res)=>{
-// const { roomId, userName, rating, description } = req.body;
-    
+ 
   const user=req.query.name
   const review={
     userName: req.body.userName,
@@ -111,17 +127,30 @@ app.post('/reviews',async(req,res)=>{
   res.send(result)
 
 })
-
-// total review
+// get review
 
 app.get('/reviews/:title', async (req, res) => {
   const roomTitle = req.params.title;
   console.log("Fetching reviews for roomId:", roomTitle)
   const totalReviews = await reviewCollection.countDocuments({ title: roomTitle});
-  res.send({ total: totalReviews });
+   const reviews = await reviewCollection.find({ title: roomTitle }).toArray();
+  res.send({ total: totalReviews,reviews:reviews });
 });
 
+// updateDate
+app.patch('/bookedRooms/:id',async(req,res)=>{
+const id=req.params.id
+const { newDate } = req.body; 
+// const updatedDate=req.body
+ const filter = { _id: new ObjectId(id) };
+const updatedDoc={
+  $set: { Booked_For: newDate }
+}
+const result=await bookingDataCollection.updateOne(filter,updatedDoc)
+res.send(result)
+console.log(result);
 
+})
 
 
 
