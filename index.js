@@ -95,11 +95,14 @@ app.delete('/bookedRooms/:id',async(req,res)=>{
 // review
 const reviewCollection=client.db('cozy-rooms').collection('review-collection');
 app.post('/reviews',async(req,res)=>{
-  // const id=req.params.id
+// const { roomId, userName, rating, description } = req.body;
+    
   const user=req.query.name
   const review={
     userName: req.body.userName,
-    
+    roomId:req.body.roomId,
+    //  roomId: new ObjectId(roomId),
+    title:req.body.title,
       rating: parseInt(req.body.rating),
       description: req.body.description,
       date: req.body.date || new Date().toISOString(),
@@ -108,6 +111,16 @@ app.post('/reviews',async(req,res)=>{
   res.send(result)
 
 })
+
+// total review
+
+app.get('/reviews/:title', async (req, res) => {
+  const roomTitle = req.params.title;
+  console.log("Fetching reviews for roomId:", roomTitle)
+  const totalReviews = await reviewCollection.countDocuments({ title: roomTitle});
+  res.send({ total: totalReviews });
+});
+
 
 
 
