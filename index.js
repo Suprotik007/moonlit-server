@@ -29,7 +29,7 @@ async function run() {
     const db = client.db('cozy-rooms');
     const roomsCollection = db.collection('rooms-collection');
     const bookingDataCollection = db.collection('BookingData-collection');
-
+const offerCollection=db.collection('specialOffers')
     console.log('Connected to MongoDB!');
  
     //featuredRooms
@@ -179,6 +179,17 @@ res.send(result)
 
 })
 
+// offers
+app.get('/specialOffers',async(req,res)=>{
+  const today=new Date()
+  const offers=await offerCollection.find({
+    $or: [
+        { validUntil: { $exists: false } },
+        { validUntil: { $gte: today.toISOString() } }
+      ]
+  }).toArray()
+  res.json(offers)
+})
 
 
     app.listen(port, () => {
