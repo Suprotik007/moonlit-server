@@ -60,12 +60,39 @@ async function run() {
  
     //allRooms
     app.get('/allRooms', async (req, res) => {
-      const allRooms = await roomsCollection
-      .find({})
-      .toArray();
-      res.json(allRooms);
-    });
+      const priceRanges = {
+  All: null, 
+  Cozy: { min: 50, max: 99 },
+  Luxury: { min: 100, max: 149 },
+  Premium: { min: 150, max: 200 }
+};
+const category = req.query.category || 'All';
+  const range = priceRanges[category];
 
+  let pipeline = [];
+
+  if (range) {
+    pipeline.push(
+      {
+        $addFields: {
+          numericPrice: {
+            $toDouble: {
+              $substr: ["$price", 0, { $subtract: [{ $strLenCP: "$price" }, 1] }] 
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          numericPrice: { $gte: range.min, $lte: range.max }
+        }
+      }
+    );
+  }
+      const rooms = range ? await roomsCollection.aggregate(pipeline).toArray() : await roomsCollection.find({}).toArray();
+    res.json(rooms);
+    });
+    
     //roomDetails
     app.get('/allRooms/:id', async (req, res) => {
       const id = req.params.id;
@@ -131,7 +158,7 @@ app.post('/reviews',async(req,res)=>{
 
 app.get('/reviews/:title', async (req, res) => {
   const roomTitle = req.params.title;
-  console.log("Fetching reviews for roomId:", roomTitle)
+  // console.log("Fetching reviews for roomId:", roomTitle)
   const totalReviews = await reviewCollection.countDocuments({ title: roomTitle});
    const reviews = await reviewCollection.find({ title: roomTitle }).toArray();
   res.send({ total: totalReviews,reviews:reviews });
@@ -141,14 +168,14 @@ app.get('/reviews/:title', async (req, res) => {
 app.patch('/bookedRooms/:id',async(req,res)=>{
 const id=req.params.id
 const { newDate } = req.body; 
-// const updatedDate=req.body
+
  const filter = { _id: new ObjectId(id) };
 const updatedDoc={
   $set: { Booked_For: newDate }
 }
 const result=await bookingDataCollection.updateOne(filter,updatedDoc)
 res.send(result)
-console.log(result);
+// console.log(result);
 
 })
 
