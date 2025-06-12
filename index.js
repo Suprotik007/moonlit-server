@@ -156,6 +156,7 @@ app.post('/reviews',async(req,res)=>{
 })
 // get review
 
+
 app.get('/reviews/:title', async (req, res) => {
   const roomTitle = req.params.title;
   // console.log("Fetching reviews for roomId:", roomTitle)
@@ -163,6 +164,18 @@ app.get('/reviews/:title', async (req, res) => {
    const reviews = await reviewCollection.find({ title: roomTitle }).toArray();
   res.send({ total: totalReviews,reviews:reviews });
 });
+
+app.get('/clientReviews', async (req, res) => {
+  
+    const clientReviews = await reviewCollection.aggregate([
+      { $sample: { size:6  } } 
+    ]).toArray();
+
+    res.send(clientReviews);
+  
+});
+
+
 
 // updateDate
 app.patch('/bookedRooms/:id',async(req,res)=>{
