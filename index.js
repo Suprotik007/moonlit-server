@@ -2,11 +2,20 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+var admin = require("firebase-admin");
+var serviceAccount = require("./serviceAccount.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({
+  origin:['http://localhost:5174'],
+  credentials:true,
+}));
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -23,14 +32,34 @@ const client = new MongoClient(uri, {
   },
 });
 
+// jwt
+const verifyJWT = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).send('Unauthorized');
+  }
+  
+  try {
+    const decoded = await admin.auth().verifyIdToken(token);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    res.status(401).send('Unauthorized');
+  }
+}
+
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
     const db = client.db('cozy-rooms');
     const roomsCollection = db.collection('rooms-collection');
     const bookingDataCollection = db.collection('BookingData-collection');
 const offerCollection=db.collection('specialOffers')
     console.log('Connected to MongoDB!');
+
+
  
     //featuredRooms
      app.get('/topRooms', async (req, res) => {
@@ -119,7 +148,7 @@ const category = req.query.category || 'All';
     });
     
 // bookingData filtering
-    app.get('/bookedRooms',async(req,res)=>{
+    app.get('/bookedRooms',verifyJWT,async(req,res)=>{
       const user=req.query.email
       const filterUser=user ? {email: user}:{}
       const bookings=await bookingDataCollection
