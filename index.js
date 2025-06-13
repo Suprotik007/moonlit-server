@@ -152,11 +152,9 @@ app.post('/reviews',async(req,res)=>{
   }
   const result=await reviewCollection.insertOne(review)
   res.send(result)
-
 })
+
 // get review
-
-
 app.get('/reviews/:title', async (req, res) => {
   const roomTitle = req.params.title;
   // console.log("Fetching reviews for roomId:", roomTitle)
@@ -165,14 +163,15 @@ app.get('/reviews/:title', async (req, res) => {
   res.send({ total: totalReviews,reviews:reviews });
 });
 
+// clientReviews
 app.get('/clientReviews', async (req, res) => {
   
     const clientReviews = await reviewCollection.aggregate([
-      { $sample: { size:6  } } 
+      { $sample: { size: 6 } },  
+      { $sort: { date: -1 } }   
     ]).toArray();
 
     res.send(clientReviews);
-  
 });
 
 
