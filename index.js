@@ -2,12 +2,9 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-var admin = require("firebase-admin");
-var serviceAccount = require("./serviceAccount.json");
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+
+
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -231,6 +228,67 @@ app.get('/specialOffers',async(req,res)=>{
   }).toArray()
   res.json(offers)
 })
+
+// ---------- AI Chatbot Integration ----------
+const { OpenAI } = require("openai");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    const roomsCollection = client.db("cozy-rooms").collection("rooms-collection");
+
+    let contextData = "";
+    if (/available|room|price|book|vacancy/i.test(message)) {
+      const rooms = await roomsCollection
+        .find({})
+        .project({ title: 1, price: 1, _id: 0 })
+        .limit(5)
+        .toArray();
+      contextData = `Here are some of our rooms:\n${rooms
+        .map((r) => `• ${r.title} — $${r.price}`)
+        .join("\n")}`;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Luna, an AI hotel booking assistant for 'Cozy Rooms'. Answer user questions about room availability, prices, reviews, and booking. Be friendly, concise, and natural.",
+        },
+        {
+          role: "user",
+          content: message,
+        },
+        ...(contextData
+          ? [{ role: "system", content: `Context info: ${contextData}` }]
+          : []),
+      ],
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("Chatbot error:", err);
+
+    // Handle OpenAI quota errors
+    if (err.code === "insufficient_quota" || err.status === 429) {
+      return res.status(429).json({
+        reply: "Sorry, Luna is temporarily out of tokens 🥲. Please try again later!"
+      });
+    }
+
+    // Other errors
+    res.status(500).json({ reply: "Sorry, Luna had trouble answering that." });
+  }
+});
+
 
 
     app.listen(port, () => {
