@@ -1,208 +1,3 @@
-// const express = require('express');
-// const cors = require('cors');
-// require('dotenv').config();
-// const jwt = require('jsonwebtoken');
-// const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-
-// const app = express();
-// const port = process.env.PORT || 3000;
-
-
-// app.use(cors({
-//   origin: true,
-//   credentials: true,
-// }));
-
-// app.use(express.json());
-
-// // JWT
-
-// const verifyJWT = (req, res, next) => {
-//   const authHeader = req.headers.authorization;
-
-  const token = authHeader.split(' ')[1];
-
-//   if (!authHeader) {
-//     return res.status(401).send({ message: 'Unauthorized access' });
-//   }
-
-//   const token = authHeader.split(' ')[1];
-
-//   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-//     if (err) {
-//       return res.status(401).send({ message: 'Invalid token' });
-//     }
-//     req.user = decoded;
-//     next();
-//   });
-// };
-
-// // db connection
-
-// const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.8n6fjbk.mongodb.net/?appName=cluster0`;
-
-
-
-// const client = new MongoClient(uri, {
-//   serverApi: {
-//     version: ServerApiVersion.v1,
-//     strict: true,
-//     deprecationErrors: true,
-//   },
-// });
-
-// async function run() {
-//   try {
-//     await client.connect();
-
-//     const db = client.db('cozy-rooms');
-//     const roomsCollection = db.collection('rooms-collection');
-//     const bookingCollection = db.collection('BookingData-collection');
-//     const reviewCollection = db.collection('review-collection');
-//     const offerCollection = db.collection('specialOffers');
-
-//     console.log('MongoDB connected');
-
-//   //  Auth
-
-//     app.post('/jwt', (req, res) => {
-//       const user = req.body; // { email }
-//       const token = jwt.sign(user, process.env.JWT_SECRET, {
-//         expiresIn: '7d',
-//       });
-//       res.send({ token });
-//     });
-
-//     // Rooms
-
-//     app.get('/allRooms', async (req, res) => {
-//       const rooms = await roomsCollection.find({}).toArray();
-//       res.send(rooms);
-//     });
-
-//     app.get('/allRooms/:id', async (req, res) => {
-//       const room = await roomsCollection.findOne({
-//         _id: new ObjectId(req.params.id),
-//       });
-//       res.send(room);
-//     });
-
-//     //  BOOKINGS 
-
-//     app.post('/bookedRooms/:id', async (req, res) => {
-//       const booking = {
-//         roomId: new ObjectId(req.params.id),
-//         email: req.body.email,
-//         Booked_For: req.body.Booked_For,
-//         createdAt: new Date(),
-//       };
-
-//       const result = await bookingCollection.insertOne(booking);
-//       res.send(result);
-//     });
-
-//     app.get('/bookedRooms', verifyJWT, async (req, res) => {
-//       const email = req.user.email;
-
-//       const bookings = await bookingCollection.aggregate([
-//         { $match: { email } },
-//         {
-//           $lookup: {
-//             from: 'rooms-collection',
-//             localField: 'roomId',
-//             foreignField: '_id',
-//             as: 'room',
-//           },
-//         },
-//         { $unwind: '$room' },
-//         {
-//           $project: {
-//             _id: 1,
-//             Booked_For: 1,
-//             title: '$room.title',
-//             Image: '$room.Image',
-//             price: '$room.price',
-//           },
-//         },
-//       ]).toArray();
-
-//       res.send(bookings);
-//     });
-
-//     app.delete('/bookedRooms/:id', verifyJWT, async (req, res) => {
-//       const result = await bookingCollection.deleteOne({
-//         _id: new ObjectId(req.params.id),
-//       });
-//       res.send(result);
-//     });
-
-//     app.patch('/bookedRooms/:id', verifyJWT, async (req, res) => {
-//       const { newDate } = req.body;
-
-//       const result = await bookingCollection.updateOne(
-//         { _id: new ObjectId(req.params.id) },
-//         { $set: { Booked_For: newDate } }
-//       );
-
-//       res.send(result);
-//     });
-
-//     /*  REVIEWS*/
-
-//     app.post('/reviews', async (req, res) => {
-//       const review = {
-//         userName: req.body.userName,
-//         roomId: new ObjectId(req.body.roomId),
-//         title: req.body.title,
-//         rating: parseInt(req.body.rating),
-//         description: req.body.description,
-//         date: new Date(),
-//       };
-
-//       const result = await reviewCollection.insertOne(review);
-//       res.send(result);
-//     });
-
-//     app.get('/reviews/:title', async (req, res) => {
-//       const reviews = await reviewCollection.find({
-//         title: req.params.title,
-//       }).toArray();
-
-//       res.send({
-//         total: reviews.length,
-//         reviews,
-//       });
-//     });
-
-// // Offers
-//     app.get('/specialOffers', async (req, res) => {
-//       const today = new Date().toISOString();
-//       const offers = await offerCollection.find({
-//         $or: [
-//           { validUntil: { $exists: false } },
-//           { validUntil: { $gte: today } },
-//         ],
-//       }).toArray();
-
-//       res.send(offers);
-//     });
-
-   
-
-//     app.get('/', (req, res) => {
-//       res.send('Cozy Rooms API is alive');
-//     });
-
-//     app.listen(port, () => {
-//       console.log(`Server running on port ${port}`);
-//     });
-//   } catch (err) {
-//     console.error(err);
-//   }
-// }
-
-// run();
-
 
 const express = require('express');
 const cors = require('cors');
@@ -427,8 +222,6 @@ async function run() {
     });
 
 
-
-<<<<<<< HEAD
 // updateDate
 app.patch('/bookedRooms/:id',async(req,res)=>{
 const id=req.params.id
@@ -456,7 +249,7 @@ app.get('/specialOffers',async(req,res)=>{
   res.json(offers)
 })
 
-// ---------- AI Chatbot Integration ----------
+// Chatbot
 const { OpenAI } = require("openai");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -517,11 +310,11 @@ app.post("/chat", async (req, res) => {
 });
 
 
-=======
+
     app.get('/', (req, res) => {
       res.send('Cozy Rooms API is alive');
     });
->>>>>>> f0bd6df (Updated Index.js)
+
 
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);
