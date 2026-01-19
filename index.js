@@ -1,25 +1,251 @@
+// const express = require('express');
+// const cors = require('cors');
+// require('dotenv').config();
+// const jwt = require('jsonwebtoken');
+// const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
+// const app = express();
+// const port = process.env.PORT || 3000;
+
+
+// app.use(cors({
+//   origin: true,
+//   credentials: true,
+// }));
+
+// app.use(express.json());
+
+// // JWT
+
+// const verifyJWT = (req, res, next) => {
+//   const authHeader = req.headers.authorization;
+
+  const token = authHeader.split(' ')[1];
+
+//   if (!authHeader) {
+//     return res.status(401).send({ message: 'Unauthorized access' });
+//   }
+
+//   const token = authHeader.split(' ')[1];
+
+//   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+//     if (err) {
+//       return res.status(401).send({ message: 'Invalid token' });
+//     }
+//     req.user = decoded;
+//     next();
+//   });
+// };
+
+// // db connection
+
+// const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.8n6fjbk.mongodb.net/?appName=cluster0`;
+
+
+
+// const client = new MongoClient(uri, {
+//   serverApi: {
+//     version: ServerApiVersion.v1,
+//     strict: true,
+//     deprecationErrors: true,
+//   },
+// });
+
+// async function run() {
+//   try {
+//     await client.connect();
+
+//     const db = client.db('cozy-rooms');
+//     const roomsCollection = db.collection('rooms-collection');
+//     const bookingCollection = db.collection('BookingData-collection');
+//     const reviewCollection = db.collection('review-collection');
+//     const offerCollection = db.collection('specialOffers');
+
+//     console.log('MongoDB connected');
+
+//   //  Auth
+
+//     app.post('/jwt', (req, res) => {
+//       const user = req.body; // { email }
+//       const token = jwt.sign(user, process.env.JWT_SECRET, {
+//         expiresIn: '7d',
+//       });
+//       res.send({ token });
+//     });
+
+//     // Rooms
+
+//     app.get('/allRooms', async (req, res) => {
+//       const rooms = await roomsCollection.find({}).toArray();
+//       res.send(rooms);
+//     });
+
+//     app.get('/allRooms/:id', async (req, res) => {
+//       const room = await roomsCollection.findOne({
+//         _id: new ObjectId(req.params.id),
+//       });
+//       res.send(room);
+//     });
+
+//     //  BOOKINGS 
+
+//     app.post('/bookedRooms/:id', async (req, res) => {
+//       const booking = {
+//         roomId: new ObjectId(req.params.id),
+//         email: req.body.email,
+//         Booked_For: req.body.Booked_For,
+//         createdAt: new Date(),
+//       };
+
+//       const result = await bookingCollection.insertOne(booking);
+//       res.send(result);
+//     });
+
+//     app.get('/bookedRooms', verifyJWT, async (req, res) => {
+//       const email = req.user.email;
+
+//       const bookings = await bookingCollection.aggregate([
+//         { $match: { email } },
+//         {
+//           $lookup: {
+//             from: 'rooms-collection',
+//             localField: 'roomId',
+//             foreignField: '_id',
+//             as: 'room',
+//           },
+//         },
+//         { $unwind: '$room' },
+//         {
+//           $project: {
+//             _id: 1,
+//             Booked_For: 1,
+//             title: '$room.title',
+//             Image: '$room.Image',
+//             price: '$room.price',
+//           },
+//         },
+//       ]).toArray();
+
+//       res.send(bookings);
+//     });
+
+//     app.delete('/bookedRooms/:id', verifyJWT, async (req, res) => {
+//       const result = await bookingCollection.deleteOne({
+//         _id: new ObjectId(req.params.id),
+//       });
+//       res.send(result);
+//     });
+
+//     app.patch('/bookedRooms/:id', verifyJWT, async (req, res) => {
+//       const { newDate } = req.body;
+
+//       const result = await bookingCollection.updateOne(
+//         { _id: new ObjectId(req.params.id) },
+//         { $set: { Booked_For: newDate } }
+//       );
+
+//       res.send(result);
+//     });
+
+//     /*  REVIEWS*/
+
+//     app.post('/reviews', async (req, res) => {
+//       const review = {
+//         userName: req.body.userName,
+//         roomId: new ObjectId(req.body.roomId),
+//         title: req.body.title,
+//         rating: parseInt(req.body.rating),
+//         description: req.body.description,
+//         date: new Date(),
+//       };
+
+//       const result = await reviewCollection.insertOne(review);
+//       res.send(result);
+//     });
+
+//     app.get('/reviews/:title', async (req, res) => {
+//       const reviews = await reviewCollection.find({
+//         title: req.params.title,
+//       }).toArray();
+
+//       res.send({
+//         total: reviews.length,
+//         reviews,
+//       });
+//     });
+
+// // Offers
+//     app.get('/specialOffers', async (req, res) => {
+//       const today = new Date().toISOString();
+//       const offers = await offerCollection.find({
+//         $or: [
+//           { validUntil: { $exists: false } },
+//           { validUntil: { $gte: today } },
+//         ],
+//       }).toArray();
+
+//       res.send(offers);
+//     });
+
+   
+
+//     app.get('/', (req, res) => {
+//       res.send('Cozy Rooms API is alive');
+//     });
+
+//     app.listen(port, () => {
+//       console.log(`Server running on port ${port}`);
+//     });
+//   } catch (err) {
+//     console.error(err);
+//   }
+// }
+
+// run();
+
+
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-
-
-
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+
 app.use(cors({
-  origin:['http://localhost:5174'],
-  credentials:true,
+  origin: true,
+  credentials: true,
 }));
+
 app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send('cozy-rooms are roaming');
-});
+// JWT
 
-const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.8n6fjbk.mongodb.net/?retryWrites=true&w=majority&appName=cluster0`;
+const verifyJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).send({ message: 'Unauthorized access' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'Invalid token' });
+    }
+    req.user = decoded;
+    next();
+  });
+};
+
+// db connection
+
+const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.8n6fjbk.mongodb.net/?appName=cluster0`;
+
+
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -29,179 +255,180 @@ const client = new MongoClient(uri, {
   },
 });
 
-// jwt
-const verifyJWT = async (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).send('Unauthorized');
-  }
-  
-  try {
-    const decoded = await admin.auth().verifyIdToken(token);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.error('Error verifying token:', error);
-    res.status(401).send('Unauthorized');
-  }
-}
-
 async function run() {
   try {
-    // await client.connect();
+    await client.connect();
+
     const db = client.db('cozy-rooms');
     const roomsCollection = db.collection('rooms-collection');
-    const bookingDataCollection = db.collection('BookingData-collection');
-const offerCollection=db.collection('specialOffers')
-    console.log('Connected to MongoDB!');
+    const bookingCollection = db.collection('BookingData-collection');
+    const reviewCollection = db.collection('review-collection');
+    const offerCollection = db.collection('specialOffers');
 
+    console.log('MongoDB connected');
 
- 
-    //featuredRooms
-     app.get('/topRooms', async (req, res) => {
-  const reviewCounts = await reviewCollection.aggregate([
-  {
-  $group: {
-  _id: '$title',
-  count: { $sum: 1 }
-  }
-  },
-  {
-  $sort: { count: -1 ,_id:1} 
-  },
-  {
-  $limit: 6 
-  }
-  ]).toArray();
- 
-  const ascendingRoom = reviewCounts.map(item => item._id);
-  const topRooms = await Promise.all(
-  ascendingRoom.map(async (title) => {
-  return await roomsCollection.findOne({ title: title });
-  })
-  );
-  res.json(topRooms.slice(0,6));
-  });
- 
-    //allRooms
+  //  Auth
+
+    app.post('/jwt', (req, res) => {
+      const user = req.body; // { email }
+      const token = jwt.sign(user, process.env.JWT_SECRET, {
+        expiresIn: '7d',
+      });
+      res.send({ token });
+    });
+
+    // Rooms
+
     app.get('/allRooms', async (req, res) => {
-      const priceRanges = {
-  All: null, 
-  Cozy: { min: 50, max: 99 },
-  Luxury: { min: 100, max: 149 },
-  Premium: { min: 150, max: 200 }
-};
-const category = req.query.category || 'All';
-  const range = priceRanges[category];
-
-  let pipeline = [];
-
-  if (range) {
-    pipeline.push(
-      {
-        $addFields: {
-          numericPrice: {
-            $toDouble: {
-              $substr: ["$price", 0, { $subtract: [{ $strLenCP: "$price" }, 1] }] 
-            }
-          }
-        }
-      },
-      {
-        $match: {
-          numericPrice: { $gte: range.min, $lte: range.max }
-        }
-      }
-    );
-  }
-      const rooms = range ? await roomsCollection.aggregate(pipeline).toArray() : await roomsCollection.find({}).toArray();
-    res.json(rooms);
+      const rooms = await roomsCollection.find({}).toArray();
+      res.send(rooms);
     });
-    
-    //roomDetails
+
     app.get('/allRooms/:id', async (req, res) => {
-      const id = req.params.id;
-      const roomDetails = await roomsCollection.findOne({ _id: new ObjectId(id) });
-      res.json(roomDetails);
+      const room = await roomsCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(room);
     });
 
-    // bookedRooms
+    //  BOOKINGS
+
     app.post('/bookedRooms/:id', async (req, res) => {
-      const roomId = req.params.id;
       const booking = {
-        roomId: roomId,
-        ...req.body
+        roomId: new ObjectId(req.params.id),
+        email: req.body.email,
+        Booked_For: req.body.Booked_For,
+        createdAt: new Date(),
       };
-      const result = await bookingDataCollection.insertOne(booking);
+
+      const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    //bookChecking
-    app.get('/bookedRooms/:id', async (req, res) => {
-      const roomId = req.params.id;
-      const existingBooking = await bookingDataCollection.findOne({ roomId: roomId });
-      res.send({ isBooked: !!existingBooking });
+    app.get('/bookedRooms', verifyJWT, async (req, res) => {
+      const email = req.user.email;
+
+      const bookings = await bookingCollection.aggregate([
+        { $match: { email } },
+        {
+          $lookup: {
+            from: 'rooms-collection',
+            localField: 'roomId',
+            foreignField: '_id',
+            as: 'room',
+          },
+        },
+        { $unwind: '$room' },
+        {
+          $project: {
+            _id: 1,
+            Booked_For: 1,
+            title: '$room.title',
+            Image: '$room.Image',
+            price: '$room.price',
+          },
+        },
+      ]).toArray();
+
+      res.send(bookings);
     });
-    
-// bookingData filtering
-    app.get('/bookedRooms',verifyJWT,async(req,res)=>{
-      const user=req.query.email
-      const filterUser=user ? {email: user}:{}
-      const bookings=await bookingDataCollection
-      .find(filterUser)
-      .toArray()
-      res.send(bookings)
-    })
 
-// cancelBooking
-app.delete('/bookedRooms/:id',async(req,res)=>{
-  const id=req.params.id
-  const query={_id: new ObjectId(id)}
-  const result=await bookingDataCollection.deleteOne(query)
-  res.send(result)
-})
+    app.delete('/bookedRooms/:id', verifyJWT, async (req, res) => {
+      const result = await bookingCollection.deleteOne({
+        _id: new ObjectId(req.params.id),
+      });
+      res.send(result);
+    });
 
-// review
-const reviewCollection=client.db('cozy-rooms').collection('review-collection');
-app.post('/reviews',async(req,res)=>{
- 
-  const user=req.query.name
-  const review={
-    userName: req.body.userName,
-    roomId:req.body.roomId,
-    //  roomId: new ObjectId(roomId),
-    title:req.body.title,
-      rating: parseInt(req.body.rating),
-      description: req.body.description,
-      date: req.body.date || new Date().toISOString(),
-  }
-  const result=await reviewCollection.insertOne(review)
-  res.send(result)
-})
+    app.patch('/bookedRooms/:id', verifyJWT, async (req, res) => {
+      const { newDate } = req.body;
 
-// get review
-app.get('/reviews/:title', async (req, res) => {
-  const roomTitle = req.params.title;
-  // console.log("Fetching reviews for roomId:", roomTitle)
-  const totalReviews = await reviewCollection.countDocuments({ title: roomTitle});
-   const reviews = await reviewCollection.find({ title: roomTitle }).toArray();
-  res.send({ total: totalReviews,reviews:reviews });
-});
+      const result = await bookingCollection.updateOne(
+        { _id: new ObjectId(req.params.id) },
+        { $set: { Booked_For: newDate } }
+      );
 
-// clientReviews
-app.get('/clientReviews', async (req, res) => {
-  
-    const clientReviews = await reviewCollection.aggregate([
-      { $sample: { size: 6 } },  
-      { $sort: { date: -1 } }   
-    ]).toArray();
+      res.send(result);
+    });
 
-    res.send(clientReviews);
-});
+    /*  REVIEWS*/
+
+    app.post('/reviews', async (req, res) => {
+      const review = {
+        userName: req.body.userName,
+        roomId: new ObjectId(req.body.roomId),
+        title: req.body.title,
+        rating: parseInt(req.body.rating),
+        description: req.body.description,
+        date: new Date(),
+      };
+
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
+    });
+
+    app.get('/reviews/:title', async (req, res) => {
+      const reviews = await reviewCollection.find({
+        title: req.params.title,
+      }).toArray();
+
+      res.send({
+        total: reviews.length,
+        reviews,
+      });
+    });
+
+    // clientReviews
+    app.get('/clientReviews', async (req, res) => {
+      const clientReviews = await reviewCollection.aggregate([
+        { $sample: { size: 6 } },
+        { $sort: { date: -1 } }
+      ]).toArray();
+      res.send(clientReviews);
+    });
+
+    // topRooms
+    app.get('/topRooms', async (req, res) => {
+      const reviewCounts = await reviewCollection.aggregate([
+        {
+          $group: {
+            _id: '$title',
+            count: { $sum: 1 }
+          }
+        },
+        {
+          $sort: { count: -1, _id: 1 }
+        },
+        {
+          $limit: 6
+        }
+      ]).toArray();
+
+      const ascendingRoom = reviewCounts.map(item => item._id);
+      const topRooms = await Promise.all(
+        ascendingRoom.map(async (title) => {
+          return await roomsCollection.findOne({ title: title });
+        })
+      );
+      res.json(topRooms.slice(0, 6));
+    });
+
+// Offers
+    app.get('/specialOffers', async (req, res) => {
+      const today = new Date().toISOString();
+      const offers = await offerCollection.find({
+        $or: [
+          { validUntil: { $exists: false } },
+          { validUntil: { $gte: today } },
+        ],
+      }).toArray();
+
+      res.send(offers);
+    });
 
 
 
+<<<<<<< HEAD
 // updateDate
 app.patch('/bookedRooms/:id',async(req,res)=>{
 const id=req.params.id
@@ -235,7 +462,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-app.post("/api/chat", async (req, res) => {
+app.post("/chat", async (req, res) => {
   try {
     const { message } = req.body;
 
@@ -290,13 +517,18 @@ app.post("/api/chat", async (req, res) => {
 });
 
 
+=======
+    app.get('/', (req, res) => {
+      res.send('Cozy Rooms API is alive');
+    });
+>>>>>>> f0bd6df (Updated Index.js)
 
     app.listen(port, () => {
-      console.log(`Cozy Rooms server running on port ${port}`);
+      console.log(`Server running on port ${port}`);
     });
   } catch (err) {
     console.error(err);
   }
 }
 
-run().catch(console.dir);
+run();
