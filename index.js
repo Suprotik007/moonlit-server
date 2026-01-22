@@ -1,22 +1,14 @@
-
-
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const admin = require('firebase-admin');
-
-// Initialize Firebase Admin
-admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
-});
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: true, 
-  credentials: true,
+  origin:  '*', 
+  credentials: false,
 }));
 app.use(express.json());
 
@@ -25,23 +17,6 @@ const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@clu
 const client = new MongoClient(uri, {
   serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true },
 });
-
-// Middleware
-const verifyJWT = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).send({ message: 'Unauthorized access' });
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const decoded = await admin.auth().verifyIdToken(token);
-    req.user = decoded; 
-    next();
-  } catch (err) {
-    return res.status(401).send({ message: 'Invalid token' });
-  }
-};
-
 
 async function run() {
   try {
@@ -55,36 +30,95 @@ async function run() {
 
     console.log('MongoDB connected');
 
-    // Rooms 
+  
+
+    //allRooms
     app.get('/allRooms', async (req, res) => {
-      const rooms = await roomsCollection.find({}).toArray();
-      res.send(rooms);
+      const priceRanges = {
+  All: null, 
+  Cozy: { min: 50, max: 99 },
+  Luxury: { min: 100, max: 149 },
+  Premium: { min: 150, max: 200 }
+};
+const category = req.query.category || 'All';
+  const range = priceRanges[category];
+
+  let pipeline = [];
+
+  if (range) {
+    pipeline.push(
+      {
+        $addFields: {
+          numericPrice: {
+            $toDouble: {
+              $substr: ["$price", 0, { $subtract: [{ $strLenCP: "$price" }, 1] }] 
+            }
+          }
+        }
+      },
+      {
+        $match: {
+          numericPrice: { $gte: range.min, $lte: range.max }
+        }
+      }
+    );
+  }
+      const rooms = range ? await roomsCollection.aggregate(pipeline).toArray() : await roomsCollection.find({}).toArray();
+    res.json(rooms);
     });
+    
+
 
     app.get('/allRooms/:id', async (req, res) => {
       const room = await roomsCollection.findOne({ _id: new ObjectId(req.params.id) });
       res.send(room);
     });
 
-    // Bookings
-    
-    app.post('/bookedRooms/:id', verifyJWT, async (req, res) => {
-      const { email, Booked_For } = req.body;
-      if (email !== req.user.email) return res.status(403).send({ message: "Forbidden" });
+     //featuredRooms
+     app.get('/topRooms', async (req, res) => {
+  const reviewCounts = await reviewCollection.aggregate([
+  {
+  $group: {
+  _id: '$title',
+  count: { $sum: 1 }
+  }
+  },
+  {
+  $sort: { count: -1 ,_id:1} 
+  },
+  {
+  $limit: 6 
+  }
+  ]).toArray();
+ 
+  const ascendingRoom = reviewCounts.map(item => item._id);
+  const topRooms = await Promise.all(
+  ascendingRoom.map(async (title) => {
+  return await roomsCollection.findOne({ title: title });
+  })
+  );
+  res.json(topRooms.slice(0,6));
+  });
 
+ 
+     // bookedRooms
+    app.post('/bookedRooms/:id', async (req, res) => {
+      const roomId = req.params.id;
       const booking = {
-        roomId: new ObjectId(req.params.id),
-        email,
-        Booked_For,
-        createdAt: new Date(),
+        roomId: roomId,
+        ...req.body
       };
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     });
 
-    // Get bookings
-    app.get('/bookedRooms', verifyJWT, async (req, res) => {
-      const email = req.user.email;
+    // Get bookings 
+    app.get('/bookedRooms', async (req, res) => {
+      const { email } = req.query;
+
+      if (!email) {
+        return res.status(400).send({ message: 'Email parameter is required' });
+      }
 
       const bookings = await bookingCollection.aggregate([
         { $match: { email } },
@@ -111,27 +145,56 @@ async function run() {
       res.send(bookings);
     });
 
+    // bookingData filtering
+    app.get('/bookedRooms',async(req,res)=>{
+      const user=req.query.email
+      const filterUser=user ? {email: user}:{}
+      const bookings=await bookingCollection
+      .find(filterUser)
+      .toArray()
+      res.send(bookings)
+    })
+
+    //bookChecking
+    app.get('/bookedRooms/:id', async (req, res) => {
+      const roomId = req.params.id;
+      const existingBooking = await bookingCollection.findOne({ roomId: roomId });
+      res.send({ isBooked: !!existingBooking });
+
+    });
+
     // Delete booking 
-    app.delete('/bookedRooms/:id', verifyJWT, async (req, res) => {
+    app.delete('/bookedRooms/:id', async (req, res) => {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).send({ message: 'Email is required in request body' });
+      }
+
       const result = await bookingCollection.deleteOne({
         _id: new ObjectId(req.params.id),
-        email: req.user.email
+        email: email
       });
       res.send(result);
     });
 
     // Update booking date 
-    app.patch('/bookedRooms/:id', verifyJWT, async (req, res) => {
-      const { newDate } = req.body;
+    app.patch('/bookedRooms/:id', async (req, res) => {
+      const { newDate, email } = req.body;
+      
+      if (!email) {
+        return res.status(400).send({ message: 'Email is required' });
+      }
+
       const result = await bookingCollection.updateOne(
-        { _id: new ObjectId(req.params.id), email: req.user.email },
+        { _id: new ObjectId(req.params.id), email: email },
         { $set: { Booked_For: newDate } }
       );
       res.send(result);
     });
 
-    //Reviews 
-    app.post('/reviews', verifyJWT, async (req, res) => {
+    // Reviews 
+    app.post('/reviews', async (req, res) => {
       const review = {
         userName: req.body.userName,
         roomId: new ObjectId(req.body.roomId),
@@ -144,20 +207,28 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/reviews/:title', async (req, res) => {
-      const reviews = await reviewCollection.find({ title: req.params.title }).toArray();
-      res.send({ total: reviews.length, reviews });
-    });
 
-    app.get('/clientReviews', async (req, res) => {
-      const clientReviews = await reviewCollection.aggregate([
-        { $sample: { size: 6 } },
-        { $sort: { date: -1 } }
-      ]).toArray();
-      res.send(clientReviews);
-    });
+    // get review
+app.get('/reviews/:title', async (req, res) => {
+  const roomTitle = req.params.title;
+  const totalReviews = await reviewCollection.countDocuments({ title: req.params.title});
+   const reviews = await reviewCollection.find({ title: roomTitle }).toArray();
+  res.send({ total: totalReviews,reviews:reviews });
+});
 
-    //Top Rooms
+
+    // clientReviews
+app.get('/clientReviews', async (req, res) => {
+  
+    const clientReviews = await reviewCollection.aggregate([
+      { $sample: { size: 6 } },  
+      { $sort: { date: -1 } }   
+    ]).toArray();
+
+    res.send(clientReviews);
+});
+
+    // Top Rooms
     app.get('/topRooms', async (req, res) => {
       const reviewCounts = await reviewCollection.aggregate([
         { $group: { _id: '$title', count: { $sum: 1 } } },
@@ -173,22 +244,21 @@ async function run() {
       res.json(topRooms.slice(0, 6));
     });
 
-    //Special Offers
+    // Special Offers
     app.get('/specialOffers', async (req, res) => {
       const today = new Date().toISOString();
       const offers = await offerCollection.find({
         $or: [
-          { validUntil: { $exists: false } },
+          { validUntil: { $exists: false } }, 
           { validUntil: { $gte: today } }
         ]
       }).toArray();
       res.json(offers);
     });
 
-   
-    app.get('/', (req, res) => res.send('Cozy Rooms API is alive'));
 
-    
+    // root
+    app.get('/', (req, res) => res.send('Cozy Rooms API is alive'));
     app.listen(port, () => console.log(`Server running on port ${port}`));
 
   } catch (err) {
