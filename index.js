@@ -30,8 +30,102 @@ async function run() {
 
     console.log('MongoDB connected');
 
-  
+ // Chatbot API 
+const { OpenAI } = require("openai");
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message } = req.body;
+    const roomsCollection = client.db("cozy-rooms").collection("rooms-collection");
+
+    
+    if (process.env.USE_FALLBACK_CHAT === 'true') {
+      
+      const reply = getFallbackResponse(message);
+      return res.json({ reply });
+    }
+
+    let contextData = "";
+    if (/available|room|price|book|vacancy|types|list|show/i.test(message)) {
+      const rooms = await roomsCollection
+        .find({})
+        .project({ title: 1, price: 1, facilities: 1, size: 1, _id: 0 })
+        .limit(5)
+        .toArray();
+      contextData = `Available rooms: ${rooms
+        .map((r) => `• ${r.title} — $${r.price} — ${r.size} — ${r.facilities?.join(', ') || 'No facilities listed'}`)
+        .join("\n")}`;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Luna, an AI hotel booking assistant for 'Cozy Rooms'. Answer user questions about room availability, prices, reviews, and booking. Be friendly, concise, and natural. Keep responses under 100 words.",
+        },
+        {
+          role: "user",
+          content: message,
+        },
+        ...(contextData
+          ? [{ role: "system", content: `Context info: ${contextData}` }]
+          : []),
+      ],
+      max_tokens: 150, 
+    });
+
+    const reply = completion.choices[0].message.content;
+    res.json({ reply });
+
+  } catch (err) {
+    console.error("Chatbot error:", err.message);
+
+    
+    const fallbackReply = getFallbackResponse(req.body?.message || "");
+    
+    res.json({ reply: fallbackReply });
+  }
+});
+
+function getFallbackResponse(userMessage) {
+  const lowerMsg = userMessage.toLowerCase();
+  
+  if (/hi|hello|hey|greetings/i.test(lowerMsg)) {
+    return "Hi there! I'm Luna 🌙 — your Cozy Rooms assistant. How can I help you today?";
+  }
+  
+  if (/available|rooms|types|list|show|options/i.test(lowerMsg)) {
+    return "We have several cozy rooms available! Currently we offer: Economy Room ($50/night), Standard Room ($80/night), Deluxe Room ($120/night), and Suite ($180/night). Would you like details on any specific room?";
+  }
+  
+  if (/price|cost|how much|rate/i.test(lowerMsg)) {
+    return "Our room prices range from $50 to $200 per night. The Economy Room starts at $50, Standard at $80, Deluxe at $120, and our luxurious Suite is $180. All prices are per night.";
+  }
+  
+  if (/book|reserve|reservation|booking/i.test(lowerMsg)) {
+    return "To book a room, please go to our website, select your desired room, and choose your dates. You can also contact us directly at bookings@cozyrooms.com or call (555) 123-4567.";
+  }
+  
+  if (/facilities|amenities|features|what's included/i.test(lowerMsg)) {
+    return "All our rooms include free Wi-Fi, air conditioning, comfortable bedding, and daily housekeeping. Some rooms also have minibars, work desks, and beautiful views!";
+  }
+  
+  if (/cancel|cancellation|refund|policy/i.test(lowerMsg)) {
+    return "You can cancel your booking up to 3 days before your stay for a full refund. Late cancellations may incur a fee. Please check our cancellation policy for details.";
+  }
+  
+  if (/contact|email|phone|call|reach/i.test(lowerMsg)) {
+    return "You can contact us at bookings@cozyrooms.com or call (555) 123-4567. Our team is available 24/7 to assist you!";
+  }
+  
+  // Default response for unknown queries
+  return "Thanks for your message! I'm currently experiencing high demand. For immediate assistance, please visit our website or contact our team directly at bookings@cozyrooms.com. How else can I help?";
+}
     //allRooms
     app.get('/allRooms', async (req, res) => {
       const priceRanges = {
