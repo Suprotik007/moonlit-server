@@ -115,6 +115,12 @@ const category = req.query.category || 'All';
     // Get bookings 
     app.get('/bookedRooms', async (req, res) => {
       const { email } = req.query;
+      const user=req.query.email
+      const filterUser=user ? {email: user}:{}
+      const totalBookings=await bookingCollection
+      .find(filterUser)
+      .toArray()
+      res.send(totalBookings)
 
       if (!email) {
         return res.status(400).send({ message: 'Email parameter is required' });
@@ -145,15 +151,7 @@ const category = req.query.category || 'All';
       res.send(bookings);
     });
 
-    // bookingData filtering
-    app.get('/bookedRooms',async(req,res)=>{
-      const user=req.query.email
-      const filterUser=user ? {email: user}:{}
-      const bookings=await bookingCollection
-      .find(filterUser)
-      .toArray()
-      res.send(bookings)
-    })
+   
 
     //bookChecking
     app.get('/bookedRooms/:id', async (req, res) => {
